@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docly - Professional Clinic Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { transition: background-color 0.3s; }
+        .glow-text { text-shadow: 0 0 20px rgba(56, 189, 248, 0.6); }
+        .dark input, .dark select, .dark textarea { background-color: #1e293b !important; color: white !important; border-color: #334155 !important; }
+        input, select, textarea { background-color: #f8fafc !important; color: #0f172a !important; }
+        .report-overlay { display: none; }
+        .report-overlay.active { display: block; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+
+    <!-- LOGIN PAGE -->
+    <div id="loginPage" class="fixed inset-0 z-[100] bg-blue-600 dark:bg-blue-900 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md">
+            <div class="text-center mb-10">
+                <div class="inline-flex p-4 rounded-3xl bg-blue-50 dark:bg-blue-800/20 mb-4">
+                    <i data-lucide="stethoscope" class="text-blue-600 w-12 h-12"></i>
+                </div>
+                <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Docly</h1>
+            </div>
+            <form id="loginForm" class="space-y-6">
+                <input type="text" id="username" required class="w-full px-5 py-4 rounded-2xl border outline-none transition" placeholder="Username">
+                <input type="password" id="password" required class="w-full px-5 py-4 rounded-2xl border outline-none transition" placeholder="Password">
+                <button type="submit" class="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-xl hover:bg-blue-700 transition">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app" class="hidden">
+        <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-xl text-white shadow-lg"><i data-lucide="activity"></i></div>
+                <span class="text-2xl font-black tracking-tighter">DOCLY</span>
+            </div>
+            <div class="flex items-center gap-5">
+                <div class="text-right">
+                    <p id="userRoleDisplay" class="text-sm font-extrabold capitalize leading-none"></p>
+                    <span id="syncStatus" class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">LIVE STATION</span>
+                </div>
+                <button onclick="logout()" class="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl hover:text-red-600 transition">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- RECEPTION SECTION -->
+        <main id="receptionSection" class="hidden p-4 md:p-8 max-w-[1500px] mx-auto w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-4 xl:col-span-4">
+                    <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800">
+                        <h2 class="text-2xl font-extrabold mb-8 flex items-center gap-3"><i data-lucide="user-plus" class="text-blue-600"></i> Register Patient</h2>
+                        <form id="patientForm" class="space-y-4">
+                            <input type="text" id="pName" placeholder="Full Name" required class="w-full px-5 py-4 border rounded-2xl outline-none">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="number" id="pAge" placeholder="Age" required class="w-full px-5 py-4 border rounded-2xl outline-none">
+                                <select id="pGender" class="w-full px-5 py-4 border rounded-2xl outline-none font-bold"><option>Male</option><option>Female</option></select>
+                            </div>
+                            <input type="tel" id="pPhone" placeholder="Phone Number" required class="w-full px-5 py-4 border rounded-2xl outline-none">
+                            <textarea id="pAddress" placeholder="Address" class="w-full px-5 py-4 border rounded-2xl outline-none h-24 resize-none"></textarea>
+                            <div class="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-3xl border border-blue-100 dark:border-blue-800">
+                                <select id="pPayment" onchange="toggleUPI()" class="w-full px-4 py-3 rounded-xl font-bold text-blue-600 bg-white dark:bg-slate-800 mb-2 border">
+                                    <option value="Cash">Cash</option><option value="UPI">UPI / Online</option>
+                                </select>
+                                <input type="text" id="pTransaction" placeholder="Transaction ID" class="hidden w-full px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-blue-200 text-sm">
+                            </div>
+                            <button type="submit" id="regBtn" class="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold shadow-xl hover:bg-blue-700 transition transform active:scale-95">Register Now</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 xl:col-span-8 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waiting</p><p id="recWaiting" class="text-4xl font-black text-orange-500 mt-2">0</p></div>
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed</p><p id="recDone" class="text-4xl font-black text-emerald-500 mt-2">0</p></div>
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-blue-500">Total Today</p><p id="recTotal" class="text-4xl font-black mt-2">0</p></div>
+                        <div class="bg-slate-900 p-6 rounded-[2rem] border-4 border-slate-800 shadow-xl flex flex-col justify-center items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">NOW CALLING</span>
+                            <div id="recNowCalling" class="text-5xl font-black text-blue-400 glow-text tracking-tighter">--</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] border dark:border-slate-800 overflow-hidden shadow-sm">
+                        <div class="px-8 py-5 border-b dark:border-slate-800 font-extrabold flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                            <span>Today's Live Queue</span>
+                            <button onclick="fetchData()" class="flex items-center gap-2 text-xs bg-white dark:bg-slate-800 border px-3 py-1.5 rounded-lg font-bold">
+                                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync Data
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="text-[10px] font-black uppercase text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                                    <tr><th class="px-8 py-4">Token</th><th class="px-8 py-4">Patient Info</th><th class="px-8 py-4">Status</th><th class="px-8 py-4 text-right">Action</th></tr>
+                                </thead>
+                                <tbody id="recTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- DOCTOR SECTION -->
+        <main id="doctorSection" class="hidden p-4 md:p-8 max-w-5xl mx-auto w-full space-y-8">
+            <div class="bg-slate-900 p-16 rounded-[4rem] text-center shadow-2xl relative">
+                <span class="px-4 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20 text-blue-400 text-xs font-black tracking-widest uppercase inline-block mb-4">Patient Consultation Room</span>
+                <h2 id="docTokenDisplay" class="text-[12rem] font-black leading-none text-white glow-text tracking-tighter my-8">--</h2>
+                <div id="docPatientInfo" class="text-3xl font-bold text-slate-400 mb-10 tracking-tight">System Ready</div>
+                <button onclick="nextPatient()" id="nextBtn" class="px-12 py-6 bg-emerald-500 text-slate-900 rounded-[2rem] font-black text-2xl shadow-xl hover:bg-emerald-400 transition transform hover:scale-105 active:scale-95 flex items-center gap-4 mx-auto uppercase">
+                    Call Next Patient <i data-lucide="arrow-right-circle" class="w-8 h-8"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border dark:border-slate-800 shadow-sm">
+                    <h3 class="text-xl font-black mb-6">Today's Statistics</h3>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900"><p class="text-[10px] font-black text-blue-500 uppercase">Total Today</p><p id="statTotalToday" class="text-4xl font-black mt-1">0</p></div>
+                        <div class="p-6 bg-orange-50 dark:bg-orange-900/20 rounded-2xl border border-orange-100 dark:border-orange-900"><p class="text-[10px] font-black text-orange-500 uppercase">Waiting</p><p id="statPendingToday" class="text-4xl font-black mt-1">0</p></div>
+                        <div class="p-6 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-100 dark:border-green-900"><p class="text-[10px] font-black text-green-500 uppercase">Done</p><p id="statDoneToday" class="text-4xl font-black mt-1">0</p></div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border dark:border-slate-800 shadow-sm flex flex-col justify-center gap-4">
+                    <button onclick="openHistory()" class="w-full h-20 bg-slate-900 text-white rounded-[1.5rem] font-black text-lg flex items-center justify-between px-8 hover:bg-slate-800 transition">
+                        Full History & Reports Center <i data-lucide="file-bar-chart-2"></i>
+                    </button>
+                    <div class="grid grid-cols-2 gap-4">
+                         <button onclick="toggleTheme()" class="h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold flex items-center justify-center gap-2">
+                             <i data-lucide="moon" class="w-5 h-5"></i> Theme
+                         </button>
+                         <button onclick="logout()" class="h-16 bg-red-50 text-red-600 rounded-2xl font-bold flex items-center justify-center gap-2 border border-red-100">
+                             <i data-lucide="log-out" class="w-5 h-5"></i> Exit
+                         </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- HISTORY / REPORTS OVERLAY PAGE -->
+    <div id="historyOverlay" class="report-overlay fixed inset-0 z-[200] bg-white dark:bg-slate-950 overflow-y-auto">
+        <div class="max-w-7xl mx-auto p-4 md:p-10 space-y-10">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6 border-b dark:border-slate-800 pb-8">
+                <h1 class="text-4xl font-black tracking-tighter">Reports Center</h1>
+                <button onclick="closeHistory()" class="p-4 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-red-50 hover:text-red-600 transition">
+                    <i data-lucide="x" class="w-8 h-8"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+                <div class="lg:col-span-6 flex flex-wrap gap-4 bg-slate-50 dark:bg-slate-900 p-6 rounded-3xl border dark:border-slate-800">
+                    <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">From</label><input type="date" id="histFrom" class="w-full h-12 px-4 rounded-xl border font-bold"></div>
+                    <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">To</label><input type="date" id="histTo" class="w-full h-12 px-4 rounded-xl border font-bold"></div>
+                    <button onclick="fetchHistory()" class="h-12 px-8 bg-blue-600 text-white rounded-xl font-bold shadow-lg">Filter</button>
+                </div>
+                <div class="lg:col-span-6 flex gap-4">
+                    <button onclick="downloadHistory()" class="flex-1 h-20 bg-emerald-600 text-white rounded-3xl font-black text-lg flex items-center justify-center gap-3 shadow-xl"><i data-lucide="download"></i> CSV Export</button>
+                    <button onclick="securePurge()" class="flex-1 h-20 bg-red-100 text-red-600 rounded-3xl font-black text-lg flex items-center justify-center gap-3 border border-red-200"><i data-lucide="trash-2"></i> Purge All</button>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] border dark:border-slate-800 overflow-hidden shadow-2xl">
+                <div class="px-8 py-5 border-b dark:border-slate-800 flex justify-between bg-slate-50 dark:bg-slate-800/50">
+                    <span class="font-black">Database (All Time)</span><span id="histCount" class="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold">Total: 0</span>
+                </div>
+                <div class="overflow-x-auto"><table class="w-full text-left"><tbody id="histTableBody" class="divide-y"></tbody></table></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://cnpytnxklswutujeitju.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucHl0bnhrbHN3dXR1amVpdGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNDI2NjMsImV4cCI6MjA4NjkxODY2M30.jOb1bEOMLVZc-wZ6MsOzJ4eY7K7aByPabC-8I2wDlUo";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allData = [];
+        let session = JSON.parse(localStorage.getItem('docly_session')) || null;
+
+        window.onload = () => {
+            if (localStorage.getItem('docly_theme') === 'dark') document.documentElement.classList.add('dark');
+            if (session) initApp();
+            else document.getElementById('loginPage').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('docly_theme', isDark ? 'dark' : 'light');
+            lucide.createIcons();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            let role = (u === 'recdemo' && p === '123') ? 'reception' : (u === 'docdemo' && p === '123') ? 'doctor' : '';
+            if (role) {
+                session = { role, name: u };
+                localStorage.setItem('docly_session', JSON.stringify(session));
+                initApp();
+            } else alert('Access Denied');
+        });
+
+        function logout() { localStorage.removeItem('docly_session'); location.reload(); }
+
+        async function initApp() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            document.getElementById('userRoleDisplay').innerText = session.role;
+            document.getElementById(session.role === 'reception' ? 'receptionSection' : 'doctorSection').classList.remove('hidden');
+
+            await fetchData();
+            _supabase.channel('main_db').on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => fetchData()).subscribe();
+        }
+
+        async function fetchData() {
+            const { data, error } = await _supabase.from('patients').select('*').order('created_at', { ascending: true });
+            if (!error) {
+                allData = data || [];
+                session.role === 'reception' ? renderReception() : renderDoctor();
+            }
+        }
+
+        function toggleUPI() { document.getElementById('pTransaction').classList.toggle('hidden', document.getElementById('pPayment').value !== 'UPI'); }
+
+        document.getElementById('patientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const today = new Date().toISOString().split('T')[0];
+            const count = allData.filter(p => p.visit_date === today).length;
+            const regBtn = document.getElementById('regBtn');
+            regBtn.innerText = "Saving..."; regBtn.disabled = true;
+
+            await _supabase.from('patients').insert([{
+                token: count + 1, name: document.getElementById('pName').value, age: document.getElementById('pAge').value,
+                gender: document.getElementById('pGender').value, phone: document.getElementById('pPhone').value,
+                address: document.getElementById('pAddress').value, payment_method: document.getElementById('pPayment').value,
+                transaction_id: document.getElementById('pTransaction').value || 'N/A', visit_date: today, status: 'waiting'
+            }]);
+
+            await fetchData();
+            alert("Token Assign: #" + (count + 1)); e.target.reset(); toggleUPI();
+            regBtn.innerText = "Register Now"; regBtn.disabled = false;
+        });
+
+        async function deletePatient(id) {
+            if (confirm('Delete patient?')) {
+                await _supabase.from('patients').delete().eq('id', id);
+                await fetchData();
+            }
+        }
+
+        function renderReception() {
+            const today = new Date().toISOString().split('T')[0];
+            const list = allData.filter(p => p.visit_date === today);
+            document.getElementById('recWaiting').innerText = list.filter(p => p.status === 'waiting').length;
+            document.getElementById('recDone').innerText = list.filter(p => p.status === 'completed').length;
+            document.getElementById('recTotal').innerText = list.length;
+            const now = list.find(p => p.status === 'calling');
+            document.getElementById('recNowCalling').innerText = now ? `#${now.token}` : "--";
+
+            document.getElementById('recTableBody').innerHTML = list.slice().reverse().map(p => `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <td class="px-8 py-5 font-black text-2xl tracking-tighter">#${p.token}</td>
+                    <td class="px-8 py-5"><div class="font-extrabold">${p.name}</div><div class="text-[10px] text-slate-400 font-bold uppercase">${p.age}Y • ${p.gender}</div></td>
+                    <td class="px-8 py-5"><span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${p.status === 'waiting' ? 'bg-orange-100 text-orange-600' : p.status === 'calling' ? 'bg-blue-600 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600'}">${p.status}</span></td>
+                    <td class="px-8 py-5 text-right"><button onclick="deletePatient('${p.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-5 h-5"></i></button></td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function nextPatient() {
+            const today = new Date().toISOString().split('T')[0];
+            const list = allData.filter(p => p.visit_date === today);
+            const current = list.find(p => p.status === 'calling');
+            const next = list.find(p => p.status === 'waiting');
+
+            document.getElementById('nextBtn').disabled = true;
+            if (current) await _supabase.from('patients').update({ status: 'completed' }).eq('id', current.id);
+            if (next) await _supabase.from('patients').update({ status: 'calling' }).eq('id', next.id);
+            else alert("Waiting list empty");
+            
+            await fetchData(); // FORCE RE-RENDER IMMEDIATELY
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function renderDoctor() {
+            const today = new Date().toISOString().split('T')[0];
+            const list = allData.filter(p => p.visit_date === today);
+            const active = list.find(p => p.status === 'calling');
+            document.getElementById('docTokenDisplay').innerText = active ? `#${active.token}` : "--";
+            document.getElementById('docPatientInfo').innerText = active ? `${active.name} (${active.age}y)` : "Consultation Room Ready";
+            document.getElementById('statTotalToday').innerText = list.length;
+            document.getElementById('statPendingToday').innerText = list.filter(p => p.status === 'waiting').length;
+            document.getElementById('statDoneToday').innerText = list.filter(p => p.status === 'completed').length;
+        }
+
+        function openHistory() { document.getElementById('historyOverlay').classList.add('active'); fetchHistory(); }
+        function closeHistory() { document.getElementById('historyOverlay').classList.remove('active'); }
+
+        async function fetchHistory() {
+            const from = document.getElementById('histFrom').value;
+            const to = document.getElementById('histTo').value;
+            let data = [...allData];
+            if (from && to) data = data.filter(p => p.visit_date >= from && p.visit_date <= to);
+            document.getElementById('histCount').innerText = "Total: " + data.length;
+            document.getElementById('histTableBody').innerHTML = data.slice().reverse().map(p => `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <td class="px-8 py-5 text-xs font-bold">${p.visit_date}</td><td class="px-8 py-5 font-black">#${p.token}</td>
+                    <td class="px-8 py-5 font-bold">${p.name}</td><td class="px-8 py-5 text-sm">${p.age}/${p.gender}</td>
+                    <td class="px-8 py-5 text-sm">${p.phone}</td><td class="px-8 py-5 uppercase text-[10px] font-black">${p.status}</td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function downloadHistory() {
+            const { data, error } = await _supabase.from('patients').select('*').csv();
+            if (error) return alert('Export Failed');
+            const blob = new Blob([data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Docly_Clinic_Backup.csv`; a.click();
+        }
+
+        async function securePurge() {
+            if (prompt("Enter Login Password to Reset All Data:") === "123") {
+                if (confirm("Delete all history?")) {
+                    await _supabase.from('patients').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    alert("Memory Cleared."); closeHistory(); await fetchData();
+                }
+            } else alert("Incorrect Password.");
+        }
+    </script>
+</body>
+</html>
